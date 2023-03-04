@@ -1,0 +1,20 @@
+{
+    "name": "codebois/qrcodeslibrary",
+    "type": "library",
+    "description": "Libraries for QRCODE 2.0 for codebois projects, generic objects",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Jerzy",
+            "email": "jerzy@zientkowski.pl"
+        }
+    ],    
+    "require": {
+        
+    },
+    "autoload": {
+        "psr-4": {
+            "qrcodeslibrary\\": "src" 
+        }
+    }
+}
