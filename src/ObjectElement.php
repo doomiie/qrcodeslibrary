@@ -30,7 +30,7 @@ class elementFields extends DBObject2
     public $dlugoscZabudowy;
     public $gruboscScianki;
     public $gatunekMaterialu;
-    public $dlugoscLuku;
+    //public $dlugoscLuku;
     public $srednica;
     public $rodzajIzolacji;
     public $numerIzolacji;
@@ -42,6 +42,12 @@ class elementFields extends DBObject2
     public $swiadectwoNaIzolacje;
     public $rm;
     public $re;
+
+    /**
+     * Typ elementu, zdefiniowany w tabeli 'type'
+     *
+     * @var int
+     */
     public $typeID;
 }
 /**
@@ -57,21 +63,23 @@ class elementFunctions extends elementFields
         //error_log(json_encode($this->id));
         //error_log(json_encode($qrCodes));
         //error_log(json_encode(count($qrCodes)));
-        if (count($qrCodes) == 4) return DBObject2::QR_POSITION_TAKEN;
+        if (count($qrCodes) == 4) return DBObject2::getErrorDescription(DBObject2::QR_OBJECT_FULL);
         // wszystkie wolne?
         if (count($qrCodes) == 0) return "A";
         foreach ($qrCodes as $key => $value) {
             $tRow[] = $value['pozycja'];
         }
         if (!isset($tRow)) {
-            return DBObject2::OBJECT_NOT_FOUND;
+            return DBObject2::getErrorDescription(DBObject2::OBJECT_NOT_FOUND);
+
         }
         $stRow = implode("", $tRow);
         if (strpos($stRow, "A") === false) return "A";
         if (strpos($stRow, "B") === false) return "B";
         if (strpos($stRow, "C") === false) return "C";
         if (strpos($stRow, "D") === false) return "D";
-        return DBObject2::OBJECT_NOT_FOUND;
+        return DBObject2::getErrorDescription(DBObject2::OBJECT_NOT_FOUND);
+
     }
 
     public function getFirstAvailableQr()
@@ -111,7 +119,8 @@ class elementFunctions extends elementFields
     }
     public function getQRCodeATPosition($position)
     {
-        if (strlen($position) != 1) return DBObject2::QR_POSITION_NOT_ABCD;
+        if (strlen($position) != 1) return DBObject2::getErrorDescription(DBObject2::QR_POSITION_NOT_ABCD);
+        if (strlen($position) != 1) return DBObject2::getErrorDescription(DBObject2::QR_POSITION_NOT_ABCD);
         $qrCodes = $this->findRelativesElementId("qrcode");
         //print_r($qrCodes);
         foreach ($qrCodes as $key => $value) {
@@ -141,7 +150,7 @@ class elementFunctions extends elementFields
     {
         $qrCode = new ObjectQrcode();
         $qrCode->loadFromDBFieldValue("qrCode", $qrCodeString);
-        error_log("Looking for QR Code " . $this->id);
+        //error_log("Looking for QR Code " . $this->id);
         if ($qrCode->elementId != $this->id) return DBObject2::QR_NOT_IN_ELEMENT;
         return $qrCode;
     }
@@ -187,6 +196,7 @@ class elementFunctions extends elementFields
     }
     /**
      * Funkcja usuwa kod QR z połączenia BEZ usuwania kodu z bazy danych!
+     * Nie używać tej funkcji, do wywalenia - używać qrCode->removeFromElement(), bo wtedy wiemy, czy qrKod JEST w elemencie ;)
      *
      * @param mixed $qrCodeID
      * 
@@ -198,6 +208,7 @@ class elementFunctions extends elementFields
      */
     public function removeQR($qrCodeID = "", $position = "")
     {
+        return DBObject2::FUNCTION_OBSOLETE_DONT_USE;
         if ($position == "" and $qrCodeID == "")
             return DBObject2::QR_REMOVE_NO_PARAMS;
         if ("" != $position) {
@@ -206,6 +217,7 @@ class elementFunctions extends elementFields
                 return DBObject2::QR_NOT_IN_ELEMENT;    // qr istnieje, ale nie jest w elemencie
             // ustaw podłączenie na -1
             $qrCode->elementId = -1;
+            $qrCode->pozycja = "";
             // zapisz do bazy danych
             $qrCode->updateToDB();
             // zwróć znaleziony ID
@@ -228,7 +240,7 @@ class elementFunctions extends elementFields
             return $qrCode->id;
         }
     }
-  
+
 
     /**
      * Funkcja pokazuje najważniejsze elementy rury do wyświetlania
@@ -241,15 +253,21 @@ class elementFunctions extends elementFields
      */
     public function printDIV()
     {
+
+        $cut = $this->findRelativesElementId("cut");
+        $cutCount = count($cut);
+
         $paramString = "<div class='text-break  justify-content-end align-items-stretch col-12 text-cyan'>";
-        $paramString .= PageElements::lineForElement("Nr rury / wytop", $this->numerRury . " / " . $this->wytop);
+        $paramString .= PageElements::lineForElement("Wytop / nr rury", $this->wytop . " / " . $this->numerRury);
+        $paramString .= PageElements::lineForElement("Link do elementu", sprintf("<span class='bg-white'>%s</span>", $this->getLinkToSingleElement(sprintf("%s/%s", $this->wytop, $this->numerRury))));
         $paramString .= PageElements::lineForElement("ID w BAZIE", $this->id);
         $paramString .= PageElements::lineForElement("Średnica", $this->srednica);
         $paramString .= PageElements::lineForElement("Długość fabryczna", $this->dlugoscFabryczna);
         $paramString .= PageElements::lineForElement("Długość zabudowy", $this->dlugoscZabudowy);
         $paramString .= PageElements::lineForElement("Średnica * do dyskusji", $this->srednica);
         $paramString .= PageElements::lineForElement("Grubość ścianki", $this->gruboscScianki);
-        $paramString .= PageElements::lineForElement("Kąt łuku", "N/A do dyskusji*");
+        // tu muszę znaleźć kąt łuku na podstawie gięcia
+
         $paramString .= PageElements::lineForElement("Gatunek materiału", $this->gatunekMaterialu);
         $paramString .= PageElements::lineForElement("Rodzaj izolacji", $this->rodzajIzolacji);
         $typElementu = new ObjectType($this->typeID);
@@ -266,8 +284,7 @@ class elementFunctions extends elementFields
             $paramString .= PageElements::lineForElement("Kilometraż? ", "BRAK");
 
         $paramString .= "<hr>";
-        $cut = $this->findRelativesElementId("cut");
-        $cutCount = count($cut);
+
         if ($cutCount > 0) {
             $paramString .= PageElements::lineForElement("ID Cięcia *", $cut[0]['id']);
             $paramString .= PageElements::lineForElement("Data cięcia *", $cut[0]['time_added']);
@@ -280,20 +297,64 @@ class elementFunctions extends elementFields
         if ($bendCount > 0) {
             $paramString .= PageElements::lineForElement("ID gięcia", $bend[0]['id']);
             $paramString .= PageElements::lineForElement("Data gięcia", $bend[0]['time_added']);
+            $paramString .= PageElements::lineForElement("Kąt łuku", $bend[0]['kat']);
+            $paramString .= PageElements::lineForElement("Oznaczenie łuku", $bend[0]['oznaczenieLuku']);
         } else
             $paramString .= PageElements::lineForElement("Element gięty? *", "NIE");
 
         $paramString .= "<hr>";
         $qrCodes = $this->findRelativesElementId("qrcode");
         $paramString .= PageElements::lineForElement("Poprawność QR? *", count($qrCodes) . " / 4");
+        
+        // szukamy spoiny
+        $qrCode = new ObjectQrcode();
+        $spoina = new ObjectJoint();
+        $paramString .= "<hr>";
+        array_multisort($qrCodes, SORT_ASC);
+        foreach ($qrCodes as $key => $value) {
+            $qrCode->loadFromArray($value);
+            $paramString .= PageElements::lineForElement("kod QR ". $qrCode->pozycja, $qrCode->name, $qrCode->id);
+
+            $jointList = $qrCode->findJoints("joint");    
+            if(count($jointList) == 0) continue;
+            $spoina->loadFromArray($jointList[0]);
+            $paramString .= PageElements::lineForElement("Spoina", $spoina->numerSpoiny);
+            if($spoina->elementId1 == $qrCode->id)
+                {
+                    $newQrCode = new ObjectQrcode($spoina->elementId2);
+                    $newObject = new ObjectElement($newQrCode->elementId);
+                }
+                else
+                {
+                    $newQrCode = new ObjectQrcode($spoina->elementId1);
+                    $newObject = new ObjectElement($newQrCode->elementId);
+                }
+                //$paramString .= PageElements::lineForElement("idź do spawu", sprintf("<span class='bg-white'>%s</span>", $newObject->getLinkToSingleElement(sprintf("%s/%s", $newObject->wytop, $newObject->numerRury))));
+                $paramString .= PageElements::lineForElement("idź do spawu", sprintf("<span class='bg-white'>%s</span>", $spoina->getLinkToSingleElement(sprintf("%s/%s", $newObject->wytop, $newObject->numerRury))));
+        }
+        
+        
 
 
+
+
+
+        $paramString .= sprintf("<div class='text-primary'><button class='btn btn-lg btn-primary m-1 mt-2 d-block' onClick=gotoElementSingle('element','%s') >Przejdź do elementu</button></div>", $this->id);
 
 
         $paramString .= "</div>";
         return $paramString;
     }
 
+    /**
+     * [Description for getType]
+     *
+     * @return string nazwa typu elementu/rury
+     * 
+     * Created at: 3/17/2023, 10:03:04 AM (Europe/Warsaw)
+     * @author     Jerzy "Doom_" Zientkowski 
+     * @see       {@link https://github.com/doomiie} 
+     */
     public function getType()
     {
         $row = $this->dbHandler->getRowSQL("SELECT typeName from type where id = $this->typeID;");
@@ -305,22 +366,53 @@ class elementFunctions extends elementFields
         return count($qrCodes);
     }
 
+    public function getJointCount()
+    {
+        $qrCodes = $this->findJoints("joint");
+        return count($qrCodes);
+    }
+    public function getCutCount()
+    {
+        $qrCodes = $this->findRelativesElementId("cut");
+        return count($qrCodes);
+    }    public function getBendCount()
+    {
+        $qrCodes = $this->findRelativesElementId("bend");
+        return count($qrCodes);
+    }
+
     public function returnTableArray()
     {
         //$paramString = parent::returnTableArray();
-        $paramString["Przyciski działań"] = PageElements::addButtonViewItemInTable($this->getTableName(), $this->id);
+        $paramString["id"] = $this->id;
+        $paramString["Data"] = $this->id;
+        $paramString["Nr wytopu"] = $this->wytop;
+        $paramString["Nr rury"] = $this->numerRury;
+        $paramString["Nr wytopu / Nr rury"] = sprintf("%s", $this->getLinkToSingleElement(sprintf("%s/%s", $this->wytop, $this->numerRury)));
+        $paramString["Data dodania"] = $this->id;
+        $paramString["Akcje"] = PageElements::addButtonViewItemInTable($this->getTableName(), $this->id);
+
+       $paramString["Grubość ścianki"] =  $this->gruboscScianki;
+       $paramString["Średnica"] =  $this->srednica;
+       $paramString["Długość fabryczna"] =  $this->dlugoscFabryczna;
+       $paramString["Długość zabudowy"] =  $this->dlugoscZabudowy;
+       $paramString["Gatunek materiału"] = $this->gatunekMaterialu;
+       $paramString["Rodzaj izolacji"] =  $this->rodzajIzolacji;
+
+       
+
         $mileage = $this->findRelativesElementId("mileage");
         $mileageCount = count($mileage);
         if ($mileageCount > 0) {
             $paramString["Ostatni Kilometraż"]  = $mileage[0]['kilometraz'];
             $paramString["Data kilometrażu"]  =  $mileage[0]['time_added'];
         } else {
-            $paramString["Kilometraż"]  =  "BRAK";
+            $paramString["Ostatni Kilometraż"]  =  "BRAK";
             $paramString["Data kilometrażu"]  =  "";
         }
 
-        $type = new ObjectType($this->typeID);
-        $paramString["Typ elementu"]  =  $type->typeName;
+        //$type = new ObjectType($this->typeID);
+        $paramString["Typ elementu"]  =  'test'; //$type->typeName;
 
 
 
@@ -348,7 +440,43 @@ class elementFunctions extends elementFields
 
         $qrCodes = $this->findRelativesElementId("qrcode");
         $paramString["Poprawność QR"]['count']  =  count($qrCodes) . " / 4";
-        $paramString["Poprawność QR"]['error']  =  count($qrCodes) == 4;
+        $paramString["Poprawność QR"]['count']  =  count($qrCodes) . " / 4";
+        $paramString["Kody QR"]  =  count($qrCodes) . " / 4";
+        $paramString["QR A"] = "";
+        $paramString["QR spaw A"] = "";
+        $paramString["QR spaw B"] = "";
+        $paramString["QR spaw C"] = "";
+        $paramString["QR spaw D"] = "";
+        $paramString["QR B"] = "";
+        $paramString["QR C"] = "";
+        $paramString["QR D"] = "";
+        $qrCode = new ObjectQrcode();
+        $spoina = new ObjectJoint();
+        foreach ($qrCodes as $key => $value) {
+
+            $paramString["QR " . $value['pozycja']] = $value['name'];
+            $qrCode->loadFromArray($value);
+            //$paramString .= PageElements::lineForElement("kod QR", $qrCode->name);
+
+            $jointList = $qrCode->findJoints("joint");    
+            if(count($jointList) == 0) continue;
+            $spoina->loadFromArray($jointList[0]);
+            //$paramString .= PageElements::lineForElement("Spoina", $spoina->numerSpoiny);
+            if($spoina->elementId1 == $qrCode->id)
+                {
+                    $newQrCode = new ObjectQrcode($spoina->elementId2);
+                    $newObject = new ObjectElement($newQrCode->elementId);
+                }
+                else
+                {
+                    $newQrCode = new ObjectQrcode($spoina->elementId1);
+                    $newObject = new ObjectElement($newQrCode->elementId);
+                }
+            $paramString["QR spaw " . $value['pozycja']] = $newObject->getLinkToSingleElement(sprintf("%s/%s", $newObject->wytop, $newObject->numerRury));
+                
+        }
+
+
 
 
         $paramString = array_merge($paramString, parent::returnTableArray());
@@ -373,8 +501,25 @@ class elementFunctions extends elementFields
 
     public function getObjectButton($color = "text-white", $title = null)
     {
-        
-                return parent::getObjectButton("text-white", sprintf("[%'.6d] %s %s", $this->id, $this->wytop . " / ".$this->numerRury, $this->getType()));
+
+        return parent::getObjectButton("text-white", sprintf("[%'.6d] %s %s", $this->id, $this->wytop . " / " . $this->numerRury, $this->getType()));
+    }
+
+    /**
+     * Dla potrzeb testów, sprawdza poprawność obiektu
+     * Zaimplementować do każdego obiektu
+     *
+     * @return array z błędami
+     * 
+     * Created at: 3/12/2023, 11:19:30 AM (Europe/Warsaw)
+     * @author     Jerzy "Doom_" Zientkowski 
+     * @see       {@link https://github.com/doomiie} 
+     */
+    public function validate()
+    {
+        $errorTable = Array();
+        $errorTable = array_merge($errorTable, parent::validate());
+        return $errorTable;
     }
 }
 class ObjectElement extends elementFunctions

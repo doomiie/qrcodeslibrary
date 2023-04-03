@@ -21,7 +21,7 @@
 namespace qrcodeslibrary;
 
 use Database\DBObject2;
-
+use Database\ObjectUser;
 
 class mileageFields extends DBObject2
 {
@@ -52,21 +52,42 @@ class mileageFunctions extends mileageFields
     public function returnTableArray()
     {
         $elementOriginal = new ObjectElement($this->elementId);
-        $paramString["Oryginalny element"]  = $elementOriginal->getLinkToSingleElement($elementOriginal->numerRury . "/" . $elementOriginal->wytop);
+        $paramString["Oryginalny element"]  = $elementOriginal->getLinkToSingleElement($elementOriginal->wytop . "/" . $elementOriginal->numerRury);
+        $paramString["Akcje"]  = PageElements::addButtonViewItemInTable($elementOriginal->getTableName(), $elementOriginal->id);
+        $paramString["Kilometraż"]  = $this->kilometraz;
+        $paramString["Typ referencji"]  = $this->refType;
+        //$paramString["Akcje"]  = PageElements::addButtonViewItemInTable("ansurd", $elementOriginal->id);
         
         $gps = new ObjectGps();
         $gps->findMe($this);
         //$paramString["GPS"]  = $gps->returnGoogleMapsHref($gps->id);
+        if($gps->id != -1)
+        {
+        $paramString["Pozycja"]  = $gps->returnGoogleMapsHref('Mapa google');
         $paramString["Mapa google"]  = $gps->returnGoogleMapPictureHref($gps->id);
+        }
+        else
+        {
+            $paramString["Pozycja"]  = "Brak wpisu w DB";
+            $paramString["Mapa google"]  = "Brak wpisu w DB";
+                
+        }
         $paramString = array_merge($paramString, parent::returnTableArray());
-
+        
+        
+        $paramString["Użytkownik"] = $gps->name != ""?(new ObjectUser($gps->name))->username:"";
+        
         return $paramString;
     }
 
     public function returnTableArray931()
     {
         $elementOriginal = new ObjectElement($this->elementId);
-        $paramString["Wytop/nr rury  (narastająco wraz z kilometrażem)"]  = $elementOriginal->getLinkToSingleElement($elementOriginal->wytop . "/" . $elementOriginal->numerRury);
+        $paramString["Akcje"]  = PageElements::addButtonViewItemInTable($elementOriginal->getTableName(), $elementOriginal->id);
+        $paramString["ID"]  = $this->id;
+        $paramString["Data"]  = date("Y-m-d", strtotime($this->time_added));
+
+        $paramString["Wytop/nr rury  (narastająco wraz z kilometrażem)"]  = $elementOriginal->wytop . "/" . $elementOriginal->numerRury;
         $paramString['Długość rury (zabudowa)'] = $elementOriginal->dlugoscZabudowy;
         $paramString['Lokalizacja w km trasy (projekt)'] = "Skąd to wziąć?";
         $paramString['Lokalizacja w km trasy (faktyczna)'] = $this->kilometraz;

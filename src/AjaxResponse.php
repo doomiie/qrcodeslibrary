@@ -39,7 +39,7 @@ class AjaxResponse
         {
             $structure = method_exists($object, "printStructure") ?  $object->printStructure() :  "";
             $nextFreePosition = method_exists($object, "getNextFreePosition") ?  $object->getNextFreePosition() :  "";
-            $historyTable = method_exists($object, "returnHistoryTable") ?  $object->returnHistoryTable($object->returnHistoryArrayForElement()) :  null;
+            $historyTable = method_exists($object, "returnHistoryTable") ?  (isset($forceHistory)? $object->returnHistoryTable($object->returnHistoryArrayForElement()) : "No forceHistory Flag is set!"):"";
 
         }
 

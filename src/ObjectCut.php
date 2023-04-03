@@ -28,6 +28,9 @@ class cutFields extends DBObject2
     public $originalLength;
     public $leftoverLength;
     public $cutType;
+    public $numerSpoiny;    // numer spoiny przy cięciu
+
+    const SEPARATORRURY = ".";
 }
 class cutFunctions extends cutFields
 {
@@ -50,36 +53,69 @@ class cutFunctions extends cutFields
             $this->cutType
         ) . parent::printDIV();
     }
+    public function returnTableArray1010()
+    {
+        $elementOriginal = new ObjectElement($this->elementId);
+        $elementLeftover = new ObjectElement($this->leftoverElement);
+
+
+        $paramString["ID"]  = $this->id;
+        $paramString["Data cięcia"] = date("Y-m-d", strtotime($this->time_added));
+        $paramString["Grubość ścianki"] = $elementOriginal->gruboscScianki;
+        $paramString["Średnica"] = $elementOriginal->srednica;
+        //$paramString["Wytop/nr rury"] = $elementOriginal->getLinkToSingleElement($elementOriginal->wytop . "/" . $elementOriginal->numerRury);
+        $paramString["Wytop/nr rury"] = $elementOriginal->wytop . "/" . $elementOriginal->numerRury;
+        $paramString["Długość fabryczna rury"] = $elementOriginal->dlugoscFabryczna;
+        $paramString["Długość do zabudowy"] = $elementOriginal->dlugoscZabudowy;
+        $paramString["Nr spoiny"] = "";
+        $paramString["Kontrola"] = "";
+        $paramString["Ocena"] = "";
+        $paramString["Numer spoiny"] = $this->numerSpoiny;
+        $paramString["Odcinek pozostały"] = $elementLeftover->dlugoscZabudowy;
+        $paramString["Uwagi"] = "";
+
+        return $paramString;
+    }
 }
 class ObjectCut extends cutFunctions
 {
-    public static function cutElementMain(ObjectElement $object, $newLength, $leftoverLength, ?ObjectQrcode $qrCode, $cutType = DBObject2::CUT_TYPE_MOVE)
+    public static function cutElementMain(ObjectElement $object, $newLength, $leftoverLength, ?ObjectQrcode $qrCode, $cutType = DBObject2::CUT_TYPE_MOVE, $numerSpoiny)
     {
+        //error_log("tniemy na długości " . $newLength);
+        //error_log("długość zabudowy " . $object->dlugoscZabudowy);
         // UWAGA, zmiana, newLength jest odcinane z prawej strony
         $newLength = $object->dlugoscZabudowy - $newLength;
+        if ($newLength < 0) return DBObject2::OBJECT_LENGTH_NEGATIVE;
+        //error_log("długość zabudowy ok, lecimy dalej " . $object->dlugoscZabudowy);
         if ($object->getQRCount() != 4) return DBObject2::QR_NOT_FOUND;
-        // jeśli nie ma tyle rury, nie tnij!
-        if ($newLength >= $object->dlugoscZabudowy) return DBObject2::OBJECT_LENGTH_TOO_SMALL;
         // średnica jest 700 - czyli 0,7m
         // długość cięcia jest w m. (1.12)
         // czyli trzeba pomnożyć * 1000
-        if ($newLength * 1000 <= $object->srednica) return DBObject2::OBJECT_LENGTH_SMALLER_THAN_DIAMETER;
+        // ale ne przy CUT zerowym!
+        if ($cutType != DBObject2::CUT_TYPE_ZERO) {
+            // jeśli nie ma tyle rury, nie tnij!
+            if ($newLength >= $object->dlugoscZabudowy) return DBObject2::OBJECT_LENGTH_TOO_SMALL;
+
+
+            if ($newLength * 1000 <= $object->srednica) return DBObject2::OBJECT_LENGTH_SMALLER_THAN_DIAMETER;
+        }
         // jeśli nie ma leftoverLEngth, oblicz
         if ("" == $leftoverLength) {
             $leftoverLength = (float)$object->dlugoscZabudowy - (float)$newLength;
         }
-        error_log("Nowy obiekt ma długość " . $leftoverLength * 1000 . " vs srednica " . $object->srednica);
-        if ($leftoverLength * 1000 <= $object->srednica) return DBObject2::OBJECT_LENGTH_SMALLER_THAN_DIAMETER;
+        //error_log("Nowy obiekt ma długość " . $leftoverLength * 1000 . " vs srednica " . $object->srednica);
+        if ($cutType != DBObject2::CUT_TYPE_ZERO)
+            if ($leftoverLength * 1000 <= $object->srednica) return DBObject2::OBJECT_LENGTH_SMALLER_THAN_DIAMETER;
         //1. Create a copy of original element
         $originalClass = get_class($object);
         $lefoverObject = new $originalClass($object->id);   // <= copy of original
         //1. Cut it down
         $object->dlugoscZabudowy = $newLength;
         //2. delete old qrcodes!
-        error_log("---------------------------------------- Działamy z objectcut");
+        //error_log("---------------------------------------- Działamy z objectcut");
         if (null == $qrCode) {
             $qrCode = $object->getFirstAvailableQr();
-            error_log("Szukamy kodu" . json_encode($qrCode));
+            //error_log("Szukamy kodu" . json_encode($qrCode));
         }
         if (null == $qrCode) return DBObject2::QR_NOT_FOUND;
         if (DBObject2::CUT_TYPE_MOVE == $cutType or DBObject2::CUT_TYPE_DESTROY == $cutType) {
@@ -102,21 +138,21 @@ class ObjectCut extends cutFunctions
         //NOTE - w tym miejscu nazywamy rurę!
         //1. Znajdź wszystkie elementy o wytop = wytop i nr rury zawierający nr rury
         // SELECT * FROM `element` WHERE WYTOP = 220746 and numerRury like '2281_1%' ORDER BY id DESC
-        $sql = sprintf("SELECT * FROM `element` WHERE WYTOP = %s and numerRury like '%s__' ORDER BY id DESC", $object->wytop, $object->numerRury);
+        $sql = sprintf("SELECT * FROM `element` WHERE WYTOP = %s and numerRury like '%s%s%%' ORDER BY id DESC", $object->wytop, $object->numerRury, self::SEPARATORRURY);
+        //error_log("SQL dla nowego numeru rury: " . $sql);
         $row = $object->dbHandler->getRowSql($sql);
-        if(null == $row)
-        {
+        if (null == $row) {
             $nowyNumerRury = 1;
-        }
-        else
-        {
-            $tempNumerRury = explode("-", $object->numerRury);
+        } else {
+            $tempNumerRury = explode(self::SEPARATORRURY, $row[0]['numerRury']);
+            //error_log(end($tempNumerRury));
             $nowyNumerRury = array_pop($tempNumerRury) + 1;
         }
 
 
 
-        $lefoverObject->numerRury .= "-" . $nowyNumerRury;
+        $lefoverObject->numerRury .= self::SEPARATORRURY . $nowyNumerRury;
+        //error_log("Nowy numer rury = " . $lefoverObject->numerRury);
         //$lefoverObject->numerRury .= "_" . substr(bin2hex(random_bytes(4)), 0, 4);  // random name to avoid duplicates
         //2. Check for leftover type
         $nL = (float)100 * (float)$leftoverLength;
@@ -136,6 +172,7 @@ class ObjectCut extends cutFunctions
         }
         $cut = new ObjectCut();
         $cut->elementId = $object->id;
+        $cut->numerSpoiny = $numerSpoiny;
         $cut->leftoverElement = $leftoverNewId;
         $cut->originalLength = $newLength;
         $cut->leftoverLength = $leftoverLength;
@@ -277,18 +314,22 @@ class ObjectCut extends cutFunctions
     public function returnTableArray()
     {
         //return parent::returnTableArray();
-        $paramString["Przyciski działań"] = PageElements::addButtonViewItemInTable($this->getTableName(), $this->id);
+        $paramString["ID"] = $this->id;
         $paramString["Typ cięcia"] = $this->getTypCieciaOpis();
+        $paramString["Numer spoiny"] = $this->numerSpoiny;
+
+
         $gps = new ObjectGps();
         $gps->findMe($this);
         //$paramString["GPS"]  = $gps->returnGoogleMapsHref($gps->id);
         $paramString["Mapy google"]  = $gps->returnGoogleMapPictureHref($gps->id);
-      
-     
+
+
         $elementOriginal = new ObjectElement($this->elementId);
-        $paramString["Oryginalny element"]  = $elementOriginal->getLinkToSingleElement($elementOriginal->numerRury . "/" . $elementOriginal->wytop);
+        $paramString["Akcje"] = PageElements::addButtonViewItemInTable($elementOriginal->getTableName(), $elementOriginal->id);
+        $paramString["Wytop/nr rury"]  = $elementOriginal->getLinkToSingleElement($elementOriginal->wytop . "/" . $elementOriginal->numerRury);
         $elementLeftover = new ObjectElement($this->leftoverElement);
-        $paramString["Do zabudowy/odpad element"]  = $elementLeftover->getLinkToSingleElement($elementLeftover->numerRury . "/" . $elementLeftover->wytop);
+        $paramString["Do zabudowy/odpad element"]  = $elementLeftover->getLinkToSingleElement($elementLeftover->wytop . "/" . $elementLeftover->numerRury);
         $paramString = array_merge($paramString, parent::returnTableArray());
 
         return $paramString;

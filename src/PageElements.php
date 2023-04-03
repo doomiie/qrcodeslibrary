@@ -27,6 +27,7 @@ class PageElements
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <meta name="description" content="" />
         <meta name="author" content="Jerzy Zientkowski CODEBOIS 2023" />
+        <link rel="icon" type="image/x-icon" href="assets/img/favicon.png" />
         <title>%s::CodeBois::QRCODES v2.0</title>
         <!-- css styling -->
         <link href="assets/css/fontawesome.css" rel="stylesheet">
@@ -35,6 +36,7 @@ class PageElements
         <link href="css/styles.css" rel="stylesheet" />
         <link href="css/video.css" rel="stylesheet" />
         <link href="css/lds-roller.css" rel="stylesheet" />
+        <link rel="stylesheet" type="text/css" href="DataTables/datatables.css">
         
         <!-- JQUERY needs to be the first script -->
         <script type="text/javascript" src="js/jquery-3.6.3.min.js"></script>
@@ -44,9 +46,25 @@ class PageElements
         <script src="js/feather.min.js" crossorigin="anonymous"></script>
         <script src="js/beep.js"></script>
         <script type="text/javascript" src="js/qrcode-gps.js"></script>
+        <script type="text/javascript" src="js/qrcode-objects.js"></script>
+        <script src="DataTables/datatables.js"></script>
+        
         
         
     </head>', $title);
+    }
+    // te dwie linie wycięte z góry
+    // <script type="text/javascript" src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    // <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
+
+
+    public static function printScripts()
+    {
+        echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+        <script data-search-pseudo-elements defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/js/all.min.js" crossorigin="anonymous"></script>
+        <script src="js/qrcode-scripts.js"></script>
+        <script src="js/scripts.js"></script>';
     }
     public static function printFooter($index = -1, $visible = "d-none")
     {
@@ -96,7 +114,7 @@ class PageElements
         <img class='img-fluid' src='assets/img/illustrations/profiles/profile-2.png' />
         </a>
         <div class='dropdown-menu dropdown-menu-end border-0 shadow animated--fade-in-up' aria-labelledby='navbarDropdownUserImage'>",
-            
+
             isset($user) ? "fa-user-lock" : "fa-skull-crossbones"
         );
     }
@@ -165,9 +183,18 @@ class PageElements
     {
         printf('<a class="nav-link %s" href="%s">%s</a>', $color, $href, $title);
     }
-    protected static function simpleLink($href, $title)
+    protected static function simpleLink($href, $title, $desc = "Dodaj opis")
     {
-        printf('<a class="nav-link" href="%s">%s</a>', $href, $title);
+        printf('<a class="nav-link" href="%s" title="%s">%s</a>', $href, $desc, $title);
+        //echo "<a class='nav-link' href='$href'>$title</a>". PHP_EOL;
+    } 
+    public static function jsLinkString($function, $title, $desc = "Dodaj opis")
+    {
+        return sprintf('<a class="nav-link stretched-link"  href="" onClick="%s return false;" title="%s">%s</a>', $function, $desc, $title);
+    }
+    public static function jsLink($function, $title, $desc = "Dodaj opis")
+    {
+        echo self::jsLinkString($function,$title, $desc);
         //echo "<a class='nav-link' href='$href'>$title</a>". PHP_EOL;
     }
     public static function Menu2()
@@ -207,26 +234,65 @@ class PageElements
         self::sectionHeaderSideNav("Obiekty");
         $sectionUID = self::sectionHeaderCollapsed("Status systemu", 'list');
         self::sectionCollapseOpen($sectionUID);
+        self::simpleLink("status.php", "STATUS systemu");
+        self::simpleLink("users.php", "Użytkownicy");
         self::simpleLink("login.php", "login");
         self::simpleLink("logout.php", "logout");
+        $params = Array(
+            'className' => 'ObjectJoint',
+            'class' => 'ObjectJoint',
+            'where' => ' where  id > 50',
+        );
+        self::jsLink(sprintf('gotoLinkWithPost(\'element-list-db-class.php\',\'%s\');',htmlentities(json_encode($params))), "test", "opis testu");
+        //self::simpleLink("import.php", "import data");
+        //self::simpleLink("element-list-db.php", "test data");
+        self::simpleLink("element-single-joint-path.php", "test ścieżki spawu");
+        self::simpleLink("status-qr.php", "Drukowanie zakresu QR");
         //self::simpleLink("#!", "Mapa projektów");
         self::sectionCollapseClose($sectionUID);
-        self::sectionHeaderSideNav("ZARZĄDZANIE");
-        $sectionUID = self::sectionHeaderCollapsed("Zarządzanie", 'list');
+      
+        self::sectionHeaderSideNav("NOWY dostęp do DB");
+        $sectionUID = self::sectionHeaderCollapsed("NOWY dostęp do DB", 'list');
         self::sectionCollapseOpen($sectionUID);
-        self::simpleLink("element-list-rury-plac.php", "Wszystkie elementy:RURY z placu/bez QR");
-        self::simpleLink("element-list-rury.php", "Wszystkie elementy:RURY");
-        self::simpleLink("element-list.php", "Wszystkie elementy");
-        self::simpleLink("mileage-list.php", "Wszystkie kilometraże");
-        self::simpleLink("cut-list.php", "Wszystkie cięcia");
-        self::simpleLink("bend-list.php", "Wszystkie gięcia");
-        self::simpleLink("joint-list.php", "Wszystkie spoiny");
+        self::simpleLink("element-list-db.php?class=ObjectElement", "Wszystkie elementy");
+        self::simpleLink("element-list-db.php?class=ObjectMileage", "Wszystkie kilometraże");
+        self::simpleLink("element-list-db.php?class=ObjectCut", "Wszystkie cięcia");
+        self::simpleLink("element-list-db.php?class=ObjectBend", "Wszystkie gięcia");
+        self::simpleLink("element-list-db.php?class=ObjectJoint", "Wszystkie spoiny");
         self::sectionCollapseClose($sectionUID);
+        self::sectionHeaderSideNav("Raporty customowe (do listy życzeń)");
+        $sectionUID = self::sectionHeaderCollapsed("Raporty customowe (do listy życzeń)", 'list');
+        self::sectionCollapseOpen($sectionUID);
+        self::simpleLink("element-list-db-class.php?class=ObjectElement", "Wszystkie elementy");
+        self::simpleLink("element-list-db-class.php?class=ObjectMileage", "Wszystkie kilometraże");
+        self::simpleLink("element-list-db-class.php?class=ObjectCut", "Wszystkie cięcia");
+        self::simpleLink("element-list-db-class.php?class=ObjectBend", "Wszystkie gięcia");
+        self::simpleLink("element-list-db-class.php?class=ObjectJoint", "Wszystkie spoiny");
+        self::simpleLink("element-list-db-class.php?class=ObjectQrcode", "[DIAGNOSTYKA] Wszystkie kody QR");
+        self::simpleLink("element-list-db-class.php?class=ObjectGps", "[DIAGNOSTYKA] Wszystkie logowania GPS");
+        self::simpleLink("element-list-db-class.php?class=ObjectIsolation", "[DIAGNOSTYKA] Wszystkie izolacje");
+        self::simpleLink("element-list-db-class.php?class=ObjectZlecenie", "[DIAGNOSTYKA] Wszystkie zlecenia");
+        self::simpleLink("zlecenie-single.php", "[DIAGNOSTYKA] Pojedyncze zlecenie");
+        $params = Array(
+            'className' => 'ObjectElement',
+            'class' => 'ObjectElement',
+            'where' => ' where  typeID = 10 ',
+        );
+        self::jsLink(sprintf('gotoLinkWithPost(\'element-list-db-class.php\',\'%s\');',htmlentities(json_encode($params))), "[DIAGNOSTYKA] Wysztkie odpady", "[DIAGNOSTYKA] Wysztkie odpady");
+        
+        self::sectionCollapseClose($sectionUID);
+
         self::sectionHeaderSideNav("RAPORTY");
         $sectionUID = self::sectionHeaderCollapsed("Raporty", 'list');
         self::sectionCollapseOpen($sectionUID);
-        self::simpleLink("raport-7.2.php", "Raport 7-2");
-        self::simpleLink("raport-9-3.1.php", "Raport 9-3.1");
+        self::simpleLink("raport-7.2.dev.php", "Raport 7-2", "7-2 nr 5 Protokół kontroli łuków giętych na zimno");
+        //self::simpleLink("raport-7-2.php", "Raport 7-2 DEV");
+        //self::simpleLink("raport-9-3.1.php", "Raport 9-3.1");
+        self::simpleLink("raport-9-3.1.dev.php", "Raport 9-3.1", "Dzienny raport rozwózki rur i łuków 9-3.1");
+        self::simpleLink("raport-10-10.php", "Raport 10-10", "10-10 Dziennik cięcia rur i badań nr 1");
+        self::simpleLink("raport-10-12.php", "Raport 10-12", "10-12 Dziennik spawania HDD Linia 15.02.2023 poprawiony.xls");
+        self::simpleLink("raport-10-15.php", "Raport 10-15", "10-15 Zgłoszenie spoin do badań nr 27");
+        self::simpleLink("raport-rury.php", "Customowy raport rur");
         self::sectionCollapseClose($sectionUID);
     }
     /**
@@ -367,15 +433,45 @@ class PageElements
             </div>
         </div>', $title, $title, $icon == null ? 'fa-question-mark' : $icon, $link, $description);
     }
-    public static function addInput($title, $ident, $value="")
+    public static function addInput($title, $ident, $value = "", $required = true, $store=false)
     {
-        echo self::addInputString($title, $ident);
+        echo self::addInputString($title, $ident, $value, $required, $store);
     }
-    public static function addInputString($title, $ident, $value="", $required = true)
+    public static function addInputString($title, $ident, $value = "", $required = true, $store=false)
     {
+
         $returnString = sprintf('<div>');
         $returnString .= sprintf('<label class="text-white text-uppercase  mb-1 " for="%s">%s</label>', $ident, $title);
-        $returnString .= sprintf('<input autocomplete="on" style="text-align: right !important;" class="bigInput display-3 text-right form-control text-primary mb-3" id="%s" name="%s" value="%s" %s />', $ident, $ident, $value, $required?"required":"");
+        $returnString .= sprintf('<input %s type="text" autocomplete="on" style="text-align: right !important;" class="bigInput shadow display-3 text-right form-control text-primary mb-3" id="%s" name="%s" value="%s" %s >%s</input>', $store?'data-store=true':'', $ident, $ident, $value, $required ? "required" : "", $value);
+        $returnString .= sprintf('</div>');
+        return $returnString;
+    }
+    public static function addInputDate($title, $ident, $value = "")
+    {
+        echo self::addInputDateString($title, $ident);
+    }
+    public static function addInputDateString($title, $ident, $value = "", $required = true)
+    {
+        $value = date("Y-m-d");
+
+        $returnString = sprintf('<div>');
+        $returnString .= sprintf('<label class="text-white text-uppercase  mb-1 " for="%s">%s</label>', $ident, $title);
+        $returnString .= sprintf('<input type="date" autocomplete="on" style="text-align: right !important;" class="bigInput display-3 text-right form-control text-primary mb-3" id="%s" name="%s" value="%s" min="2022-01-01" %s />', $ident, $ident, $value, $required ? "required" : "");
+        $returnString .= sprintf('</div>');
+        return $returnString;
+    }
+    
+    public static function addInputCheckBox($title, $ident, $value = "", $required = true)
+    {
+        echo self::addInputCheckBoxString($title, $ident, $value, $required, );
+    }
+    public static function addInputCheckBoxString($title, $ident, $value = "", $required = true)
+    {
+        
+
+        $returnString = sprintf('<div class="d-block">');
+        $returnString .= sprintf('<input type="checkbox" autocomplete="on"  class="large shadow text-primary m-3" id="%s" name="%s" %s %s >%s</input>', $ident, $ident, $value==1?'checked':'', $required ? "required" : "", $title);
+        //$returnString .= sprintf('<label class="text-white text-uppercase  mb-1 " for="%s"> %s </label>', $ident, $title);
         $returnString .= sprintf('</div>');
         return $returnString;
     }
@@ -428,9 +524,9 @@ class PageElements
         $returnString .= "</tbody></table>";
         return $returnString;
     }
-    public static function lineForElement($title, $value)
+    public static function lineForElement($title, $value, $tooltip = "")
     {
-        return sprintf("<div class='d-flex border-bottom border-1 border-bottom-yellow justify-content-between align-items-stretch col-12'><div>%s:</div> <div class='text-white'>%s</div></div>", $title, $value);
+        return sprintf("<div title='%s' class='d-flex border-bottom border-1 border-bottom-yellow justify-content-between align-items-stretch col-12'><div>%s:</div> <div class='text-white'>%s</div></div>", $tooltip, $title, $value);
     }
     /**
      * Tworzymy tabelę na podstawie array danych
@@ -444,8 +540,9 @@ class PageElements
      * @author     Jerzy "Doom_" Zientkowski 
      * @see       {@link https://github.com/doomiie} 
      */
-    public static function createTable($tableID, array $dataArray, $className = 'element')
+    public static function createTable($tableID, $dataArray, $className = 'element')
     {
+        if (null == $dataArray) return "<table class='table table-bordered' id='$tableID' width='100%' cellspacing='0'></table>";
         $depth = self::getArrayDepth($dataArray);
         //return "<div class='text-wrap'>" . json_encode($dataArray) . "</div>";
         $arrayHTML = "<div style='overflow-x:scroll;'><table class='table table-bordered' id='$tableID' width='100%' cellspacing='0'><thead>";
@@ -501,9 +598,10 @@ class PageElements
 
         return $depth;
     }
-    public static function createArrayForTable($id, array $dataArray)
+    public static function createArrayForTable($id, $dataArray)
     {
         $columnArray = "";
+        if (null == $dataArray) return $columnArray;
         //sprintf("{data:'Action button',title:'Przyciski działań'},");
         foreach ($dataArray[0] as $key => $value) {
             # code...
@@ -520,9 +618,25 @@ class PageElements
 
     public static function addButtonViewItemInTable($className, $id)
     {
-        return sprintf("<button class='btn btn-primary' id='viewButton'  onClick=gotoElementSingle('%s','%s')>
-        <i class='feather text-warning' data-feather='eye'></i>
+        return self::addButtonAction($className, $id, 'gotoElementSingle');
+        return sprintf("<button class='btn btn-primary m-1' id='viewButton'  onClick=gotoElementSingle('%s','%s')>
+        
+        <i class='fa fa-eye'/>
         </button>", $className, $id);
+    }
+    public static function addButtonActionParams($action, $params, $id, $faIcon = "fa-eye")
+    {
+        return sprintf("<button class='btn btn-primary m-1' id='%s'  onClick=%s(%s)>
+        <i class='fa %s'></i>
+        </button>", $id,$action, $params, $faIcon);
+    }
+    
+    public static function addButtonAction($className, $id, $action, $faIcon = "fa-eye")
+    {
+        return sprintf("<button class='btn btn-primary' id='viewButton'  onClick=%s('%s','%s')>
+        
+        <i class='fa %s'></i>
+        </button>", $action, $className, $id, $faIcon);
     }
 
 
@@ -543,8 +657,8 @@ class PageElements
                 </div>
             </div>
             <div class="card-footer  bg-white d-flex align-items-center justify-content-between small">
-                <div class="">
-                    <div class="text-warning" id="errorDisplayQrCode"></div>
+                <div class="d-flex text-wrap">
+                    <div class="text-warning text-wrap" id="errorDisplayQrCode"></div>
                 </div>
             </div>
         </div>
@@ -569,7 +683,7 @@ class PageElements
                 </div>
             </div>
             <div class="card-footer bg-white d-flex align-items-center justify-content-between small">
-                <div class="">
+                <div class="text-wrap d-flex">
                     <div class="text-warning" id="errorDisplayElement"></div>
                 </div>
             </div>
@@ -599,6 +713,8 @@ class PageElements
                     <button class="btn btn-sm btn-primary m-1" onClick="stopCamera()">Zatrzymaj kamery</button>
                 </div>
             </div>
+            
+            
         </div>
     </div>', $show);
     }
@@ -612,7 +728,7 @@ class PageElements
             </div>
             <div class="card-body bg-white d-flex justify-content-center">
                 <div class="align-items-stretch col-12" id="akcjeDisplayElement">
-                    <select onChange="installCallbackFunctionForCamera(callback_elementGetQR);" class="form-control text-lg " id="funkcjaSelect" name="funkcjaSelect" type="text">
+                    <select disabled onChange="installCallbackFunctionForCamera(callback_elementGetQR);" class="form-control text-lg " id="funkcjaSelect" name="funkcjaSelect" type="text">
                         <option default  id="add" value="add">Doskanuj po kolei</option>;
                         <option  id="addA" value="addA">Doskanuj na pozycji A</option>;
                         <option  id="addB"  value="addB">Doskanuj na pozycji B</option>;
@@ -650,7 +766,7 @@ class PageElements
                 </div>
             </div>
             <div class="card-footer bg-white d-flex align-items-center justify-content-between small">
-                <div class="">
+                <div class="text-primary" id="card-akcje-status">
                 </div>
             </div>
         </div>
@@ -665,6 +781,15 @@ class PageElements
                 <div id="">Wyszukaj element po nr wytopu i rury</div>
             </div>
             <div class="card-body d-flex justify-content-center">
+                
+                <div class="row">
+                    <div class="display-flex justify-content-between align-items-center">
+                        <label class="text-black text-uppercase  mb-1 " for="inputWytop">Wytop</label>
+                    </div>
+                    <div class="">
+                        <input autocomplete="on" style="text-align: right !important;" class="bigInput display-3 text-right form-control text-primary" id="inputWytop" name="inputWytop" type="" required />
+                    </div>
+                </div>
                 <div class="row">
                     <div class="display-flex justify-content-between align-items-center">
                         <label class="text-black text-uppercase  mb-1 " for="inputNrRury">Nr rury</label>
@@ -672,14 +797,6 @@ class PageElements
                     <div class="">
                         
                         <input autocomplete="on" style="text-align: right !important;" class="bigInput display-3 text-right form-control text-primary" id="inputNrRury" name="inputNrRury" type="" required />
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="display-flex justify-content-between align-items-center">
-                        <label class="text-black text-uppercase  mb-1 " for="inputWytop">Wytop</label>
-                    </div>
-                    <div class="">
-                        <input autocomplete="on" style="text-align: right !important;" class="bigInput display-3 text-right form-control text-primary" id="inputWytop" name="inputWytop" type="" required />
                     </div>
                 </div>
             </div>
@@ -693,7 +810,7 @@ class PageElements
 
     public static function addCardSzukajSpoiny()
     {
-        return printf(' <div id="card-szukaj" class="d-none col-12  col-sm-8 col-lg-6 col-xl-4 mb-4">
+        return printf('<div class="row justify-content-center"> <div id="card-szukaj" class="d-none justify-content-center col-12  col-sm-10 col-lg-10 col-xl-10 mb-4">
         <!-- Dashboard search element card-->
         <div class="card bg-primary text-white m-4 shadow-lg">
             <div class="card-header">
@@ -716,10 +833,11 @@ class PageElements
                 </div>
             </div>
         </div>
+        </div>
     </div>');
     }
 
-public static function addCardEdit($show = 'd-none')
+    public static function addCardEdit($show = 'd-none')
     {
 
         return printf('<div id="card-element-edit" class="%s col-12  col-sm-12 col-lg-6 col-xl-4 m-1 p-0 mb-4">
@@ -741,5 +859,102 @@ public static function addCardEdit($show = 'd-none')
             </div>
         </div>
     </div>', $show);
+    }
+
+    public static function addFrom($fromReason = '')
+    {
+        if ($fromReason == "scan") {
+            printf('
+            <div class="card bg-primary text-white m-4 shadow-lg">
+                                <div class="card-header">
+                                    <div id="">Zamknij okno</div>
+                                </div>
+                                <div class="card-body d-flex bg-white justify-content-center">
+                                    <div class="m-1">');
+            PageElements::addButton("Zamknij okno", "window.opener=null; window.close(); return false;");
+            printf('
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white d-flex align-items-center justify-content-between small">
+                                    <div class="">
+                                    Po doskanowaniu kodów zamknij to okno przyciskiem, żeby wrócić do opcji cięcia
+                                    </div>
+                                </div>
+                            </div>');
+        }
+    }
+
+    public static function addScanQR($hasIndex = '')
+    {
+        if ($hasIndex != -1) return;
+        printf('<div class="card bg-primary text-white m-4 shadow-lg">
+                                <div class="card-header">
+                                    <div id="">Wybierz operację</div>
+                                </div>
+                                <div class="card-body d-flex bg-white justify-content-center">
+                                    <div class="m-1">');
+        PageElements::addButton("Skanuj QR", "skanujQR()");
+        printf('</div><div class="m-1">');
+        PageElements::addButton("Szukaj NR", "szukajNr()");
+
+        printf('</div>
+                                </div>
+                                <div class="card-footer bg-white d-flex align-items-center justify-content-between small">
+                                    <div class="text-primary p-1">
+                                    <input type="checkbox" autocomplete=""  class=" text-primary m1 " onClick= "functionKeepCameraOpen(this,false)"id="checkKeepCameraOpen" name="checkKeepCameraOpen" >Nie zamykaj okna kamery</input>
+                                    </div>
+                                </div>
+                            </div>' );
+    }
+
+    public static function jointTravelPipeInfo($object, $direction = 1)
+    {
+        $directionArrow = ($direction == 2 ? 'fa-arrow-right' : 'fa-arrow-left');
+        $qr1 = $object->getQRCodeATPosition('A');
+        $qr2 = $object->getQRCodeATPosition('B');
+        $qr3 = $object->getQRCodeATPosition('C');
+        $qr4 = $object->getQRCodeATPosition('D');
+        echo "<div id='' class='col-4  mb-4'>
+        <div class='card bg-primary text-white m-4 shadow-lg'>
+                                <div class='card-header'>
+                                    <div id=''>$object->wytop / $object->numerRury</div>
+                                </div>
+                                <div class='card-body d-flex bg-white text-primary justify-content-center'>
+                                    $object->id
+                                </div>
+                                <div class='card-footer text-primary bg-white d-flex align-items-center justify-content-between  small'>" .
+            ($direction == 2 ? $qr1->name . "<br>AB<br>" . $qr2->name : $qr3->name . "<br>CD<br>" . $qr4->name) .
+            "<i class='fa text-primary $directionArrow'></i>" .
+            ($direction == 2 ? $qr3->name . "<br>CD<br>" . $qr4->name : $qr1->name . "<br>AB<br>" . $qr2->name) .
+            "</div>
+                                </div>
+                            </div>";
+    }
+
+    public static function jointTravelJointInfo($object, $firstSecond)
+    {
+        if ($firstSecond == 1) {
+            $qr1 = new ObjectQrcode($object->elementId1);
+            $qr2 = new ObjectQrcode($object->elementId2);
+        } else {
+            $qr2 = new ObjectQrcode($object->elementId1);
+            $qr1 = new ObjectQrcode($object->elementId2);
+        }
+        echo "<div id='' class='col-4  mb-4'>
+        <div class='card bg-white-25 text-white m-4 shadow-lg'>
+                                <div class='card-header bg-gray-300'>
+                                    <div id=''>$object->numerSpoiny</div>
+                                </div>
+                                <div class='card-body d-flex bg-white text-primary justify-content-center'>
+                                    $object->id
+                                </div>
+                                <div class='card-footer bg-white text-primary d-flex align-items-center  justify-content-between  small'>
+                                    $qr1->name
+                                    <i class='fa fa-joint text-primary '></i>
+                                    $qr2->name
+                                    
+                                </div>
+                                </div>
+                            </div>";
     }
 } // koniec klasy!

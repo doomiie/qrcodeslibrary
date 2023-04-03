@@ -28,7 +28,7 @@ trait TraitAncestor
      *
      * @var int
      */
-    public $ancestorID;
+    public $ancestorID = -1;
 
     public function generateAncestor(array $params = null)
     {
@@ -44,5 +44,12 @@ trait TraitAncestor
         }
 
         return $ancestor->saveToDB();
+    }
+
+    public function getAncestor()
+    {
+        $className = get_class($this);
+        $ancestor = new $className($this->ancestorID);
+        return $ancestor;
     }
 }

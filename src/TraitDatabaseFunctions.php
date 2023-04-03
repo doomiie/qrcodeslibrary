@@ -47,7 +47,7 @@ trait TraitDatabaseFunctions
         return $this->findRelativesByField($tableName, "id");
     }
     /**
-     * [Description for findRelativesElementId]
+     * Zwraca row danych znalezionych w tabeli - nie obiekty!
      *
      * @param mixed $tableName
      * 
@@ -57,9 +57,12 @@ trait TraitDatabaseFunctions
      * @author     Jerzy "Doom_" Zientkowski 
      * @see       {@link https://github.com/doomiie} 
      */
-    public function  findRelativesElementId($tableName)
+    public function  findRelativesElementId($tableName, $active = true)
     {
-        $sql = "SELECT * from $tableName where elementId = $this->id order by id desc;";
+        $activeString = "";
+        if ($active) $activeString = " AND active = 1";
+        $sql = "SELECT * from $tableName where elementId = $this->id $activeString order by id desc;";
+        
         $row = $this->dbHandler->getRowSql($sql);
         return $row;
     }
@@ -106,8 +109,57 @@ trait TraitDatabaseFunctions
     public function findJoints($tableName)
     {
         $sql = "SELECT * from $tableName where elementId1 = $this->id or elementId2 = $this->id ;";
+        //print_r($sql);
         $row = $this->dbHandler->getRowSql($sql);
+        //print_r($row);
         return $row;
+    }
+    /**
+     * Znajduje ROW ze spoinami, jeśli są
+     *
+     * @param mixed $tableName
+     * @param string $LR wejściowy, 1 - dla LEWEJ spoiny, 2 dla prawej
+     * 
+     * @return array ze spoiną lub empty row, jeśli nic nie ma
+     * 
+     * Created at: 3/16/2023, 11:48:42 AM (Europe/Warsaw)
+     * @author     Jerzy "Doom_" Zientkowski 
+     * @see       {@link https://github.com/doomiie} 
+     */
+    public function findJointsLRIMElement($LR = "1")
+    {
+        switch ($LR) {
+            case '1':
+                //printf("1 %s:%s\r\n",__FUNCTION__, $LR);
+                $qr1 = $this->getQRCodeATPosition("A");
+                $qr2 = $this->getQRCodeATPosition("B");
+                break;
+                case '2':
+                //printf("2 %s:%s\r\n",__FUNCTION__, $LR);
+                $qr1 = $this->getQRCodeATPosition("C");
+                $qr2 = $this->getQRCodeATPosition("D");
+                break;
+
+            default:
+            //print("default" . __FUNCTION__);
+                return null;
+                break;
+        }
+        //printf("QR1:%s,QR2:%s\r\n", $qr1->pozycja, $qr2->pozycja);
+        //printf("QR1:%s,QR2:%s\r\n", is_object($qr1),is_object($qr2));
+        $joint1 = null;
+        if (is_object($qr1)) {
+           // printf("QR1:%s\r\n", $qr1->id);
+            $joint1 =  $qr1->getJointImQrCode(); // joint or null
+        }
+        if (is_object($qr2) AND $joint1 == null) {
+            //printf("QR2:%s\r\n", $qr2->id);
+            $joint1 = $qr2->getJointImQrCode(); // joint or null
+        }
+        return $joint1;
+
+
+        
     }
     public function returnCount($tableName)
     {
@@ -169,7 +221,7 @@ trait TraitDatabaseFunctions
 
         $order = array('time_added' => 'desc', 'id' => 'desc');
 
-        
+
 
         usort($totalArray, function ($totalArray, $b) use ($order) {
             $t = array(true => -1, false => 1);
@@ -259,19 +311,17 @@ trait TraitDatabaseFunctions
         foreach ($tableArray as $key => $value) {
             # code...
             if ($value['id'] == -1) continue;
-            
-            if($value['class'] == "Database\DBLog")
-            {
+
+            if ($value['class'] == "Database\DBLog") {
                 $user = new ObjectUser($value['name']);
-            }
-            else
-            $user = new ObjectUser();
+            } else
+                $user = new ObjectUser();
             $returnString .= sprintf('<tr>');
             $returnString .= sprintf('<td class="">%s</td>', $value['id']);
             $returnString .= sprintf('<td class="text-break">%s</td>', $value['class']);
             $returnString .= sprintf('<td class="text-break">%s</td>', $value['time_added']);
             $returnString .= sprintf('<td class="text-break">%s</td>', $value['time_updated']);
-            $returnString .= sprintf('<td class="text-break">%s</td>', $value['name'] . ($user->id == -1?"":" " . $user->username));
+            $returnString .= sprintf('<td class="text-break">%s</td>', $value['name'] . ($user->id == -1 ? "" : " " . $user->username));
             $returnString .= sprintf('<td class="text-break">%s</td>', isset($value['refType']) ? $value['refType'] : "OBIEKT");
             $returnString .= sprintf('<td class="text-break">%s</td>', isset($value['refId']) ? $value['refId'] : $value['id']);
             $returnString .= sprintf('<td class="text-break">%s</td>', $value['message']);
